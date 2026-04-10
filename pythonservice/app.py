@@ -4,7 +4,7 @@ import os
 import uuid
 import tempfile
 from werkzeug.utils import secure_filename
-from pythonservice.etl_pipeline import process_pdf_to_embeddings
+from etl_pipeline import process_pdf_to_embeddings
 
 app = Flask(__name__)
 CORS(app)
