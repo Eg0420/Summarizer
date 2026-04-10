@@ -19,6 +19,9 @@ wheels/
 .installed.cfg
 *.egg
 .pytest_cache/
+.pytest-cache/
+.pytest-tmp/
+pytest-cache-files-*/
 .coverage
 htmlcov/
 venv/

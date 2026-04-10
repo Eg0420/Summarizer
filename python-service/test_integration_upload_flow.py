@@ -5,7 +5,7 @@ Tests the complete pipeline from PDF upload through ELM processing
 import os
 import json
 import pytest
-from app import app
+from app import DATA_DIRS, app
 from pathlib import Path
 
 
@@ -26,7 +26,7 @@ def test_pdf_path():
 @pytest.fixture(autouse=True)
 def cleanup_gold_data():
     """Clean up test data before and after each test"""
-    gold_dir = Path(__file__).parent / 'data' / 'gold'
+    gold_dir = Path(DATA_DIRS['gold'])
     yield
     # Cleanup after test
     for file in gold_dir.glob('*.json'):
@@ -61,7 +61,7 @@ class TestUploadToProcessFlow:
         document_id = data['documentId']
 
         # Step 2: Verify document was processed
-        gold_dir = Path(__file__).parent / 'data' / 'gold'
+        gold_dir = Path(DATA_DIRS['gold'])
         gold_file = gold_dir / f'{document_id}.json'
         
         # Wait a moment for async processing
@@ -118,7 +118,7 @@ class TestUploadToProcessFlow:
 
         # Call summarize endpoint via Next.js API (simulated)
         # This tests that the document was properly stored
-        gold_dir = Path(__file__).parent / 'data' / 'gold'
+        gold_dir = Path(DATA_DIRS['gold'])
         gold_file = gold_dir / f'{document_id}.json'
         
         assert gold_file.exists()
@@ -151,7 +151,7 @@ class TestUploadToProcessFlow:
         time.sleep(1.0)
 
         # Verify both documents exist with different IDs
-        gold_dir = Path(__file__).parent / 'data' / 'gold'
+        gold_dir = Path(DATA_DIRS['gold'])
         
         assert len(document_ids) == 2
         assert document_ids[0] != document_ids[1]  # Should have different UUIDs
@@ -182,7 +182,7 @@ class TestUploadToProcessFlow:
             import time
             time.sleep(0.5)
             
-            gold_dir = Path(__file__).parent / 'data' / 'gold'
+            gold_dir = Path(DATA_DIRS['gold'])
             with open(gold_dir / f'{document_id}.json') as f:
                 gold_data = json.load(f)
                 chunks_list.append([chunk['text'] for chunk in gold_data['chunks']])

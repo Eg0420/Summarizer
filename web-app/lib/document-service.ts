@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { summarizeChunks } from './llm';
 
-const DATA_GOLD_DIR = process.env.DATA_GOLD_DIR || path.join(process.cwd(), '..', '..', 'data', 'gold');
+const DATA_GOLD_DIR = process.env.DATA_GOLD_DIR || path.join(process.cwd(), '..', 'data', 'gold');
 
 interface DocumentData {
   documentId: string;

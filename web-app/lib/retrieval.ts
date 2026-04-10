@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { embedText } from './llm';
 
-const DATA_GOLD_DIR = process.env.DATA_GOLD_DIR || path.join(process.cwd(), '..', '..', 'data', 'gold');
+const DATA_GOLD_DIR = process.env.DATA_GOLD_DIR || path.join(process.cwd(), '..', 'data', 'gold');
 
 interface Chunk {
   id: number;

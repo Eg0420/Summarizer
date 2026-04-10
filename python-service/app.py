@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import os
 import uuid
 import tempfile
@@ -6,14 +7,18 @@ from werkzeug.utils import secure_filename
 from etl_pipeline import process_pdf_to_embeddings
 
 app = Flask(__name__)
+CORS(app)
+
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max
 ALLOWED_EXTENSIONS = {'pdf'}
 
 # Data directories
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_DIR = os.path.dirname(BASE_DIR)
 DATA_DIRS = {
-    'raw': os.environ.get('DATA_RAW_DIR', './data/raw'),
-    'processed': os.environ.get('DATA_PROCESSED_DIR', './data/processed'),
-    'gold': os.environ.get('DATA_GOLD_DIR', './data/gold'),
+    'raw': os.environ.get('DATA_RAW_DIR', os.path.join(REPO_DIR, 'data', 'raw')),
+    'processed': os.environ.get('DATA_PROCESSED_DIR', os.path.join(REPO_DIR, 'data', 'processed')),
+    'gold': os.environ.get('DATA_GOLD_DIR', os.path.join(REPO_DIR, 'data', 'gold')),
 }
 
 def allowed_file(filename):

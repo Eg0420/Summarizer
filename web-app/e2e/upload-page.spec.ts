@@ -9,7 +9,48 @@ test.describe('upload page', () => {
     await expect(page.getByText('Upload a PDF to get started')).toBeVisible();
     await expect(page.getByText('Drag and drop your PDF here')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Upload File' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Process PDF' })).toBeDisabled();
     await expect(page.getByTestId('pdf-file-input')).toHaveAttribute('accept', '.pdf');
+  });
+
+  test('uploads a PDF and shows the summary and chat', async ({ page }) => {
+    await page.route('**/api/process', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          documentId: 'doc-123',
+          filename: 'sample.pdf',
+          textLength: 120,
+          chunkCount: 2,
+        }),
+      });
+    });
+    await page.route('**/api/summarize', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          documentId: 'doc-123',
+          filename: 'sample.pdf',
+          summary: 'Document Summary: This PDF is ready.',
+          tokensUsed: 14,
+        }),
+      });
+    });
+
+    await page.goto('/');
+    await page.getByTestId('pdf-file-input').setInputFiles({
+      name: 'sample.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4\n%%EOF'),
+    });
+
+    await expect(page.getByTestId('selected-file')).toContainText('sample.pdf');
+    await page.getByRole('button', { name: 'Process PDF' }).click();
+
+    await expect(page.getByTestId('summary')).toContainText('Document Summary: This PDF is ready.');
+    await expect(page.getByPlaceholder('Ask a question...')).toBeVisible();
   });
 
   test('highlights the drop zone while dragging a file over it', async ({ page }) => {
