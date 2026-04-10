@@ -2,18 +2,60 @@
  * Integration tests for Issue #10: Ask Question Flow
  * Tests the complete Q&A pipeline with pre-loaded documents
  */
-import fs from 'fs-extra';
+import fs from 'fs/promises';
 import path from 'path';
 
 // Mock fetch for API calls
 global.fetch = jest.fn();
+
+interface TestDocument {
+  metadata: {
+    filename: string;
+    total_chunks: number;
+    created_at: string;
+  };
+  chunks: Array<{
+    id: number;
+    text: string;
+    embedding: number[];
+  }>;
+}
+
+interface AskResponse {
+  answer?: string;
+  error?: string;
+  sources: Array<{
+    chunkId: number;
+    text: string;
+    score?: number;
+  }>;
+  tokensUsed?: number;
+}
+
+async function writeJSON(filePath: string, data: unknown) {
+  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+async function readJSON<T>(filePath: string): Promise<T> {
+  const content = await fs.readFile(filePath, 'utf-8');
+  return JSON.parse(content) as T;
+}
+
+async function pathExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 describe('Integration: Ask Question Flow', () => {
   const testDataDir = path.join(__dirname, '../data/gold');
 
   beforeAll(async () => {
     // Create test data directory if it doesn't exist
-    await fs.ensureDir(testDataDir);
+    await fs.mkdir(testDataDir, { recursive: true });
   });
 
   beforeEach(() => {
@@ -23,7 +65,7 @@ describe('Integration: Ask Question Flow', () => {
   afterAll(async () => {
     // Cleanup test data
     try {
-      await fs.remove(testDataDir);
+      await fs.rm(testDataDir, { recursive: true, force: true });
     } catch (e) {
       // Ignore cleanup errors
     }
@@ -60,7 +102,7 @@ describe('Integration: Ask Question Flow', () => {
 
       // Write test document
       const docPath = path.join(testDataDir, `${testDocId}.json`);
-      await fs.writeJSON(docPath, testDoc);
+      await writeJSON(docPath, testDoc);
 
       // Mock the API response for /api/ask
       (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -117,7 +159,7 @@ describe('Integration: Ask Question Flow', () => {
       };
 
       const docPath = path.join(testDataDir, `${testDocId}.json`);
-      await fs.writeJSON(docPath, testDoc);
+      await writeJSON(docPath, testDoc);
 
       const questions = [
         'Who created Python?',
@@ -192,7 +234,7 @@ describe('Integration: Ask Question Flow', () => {
       };
 
       const docPath = path.join(testDataDir, `${testDocId}.json`);
-      await fs.writeJSON(docPath, testDoc);
+      await writeJSON(docPath, testDoc);
 
       // First request succeeds
       (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -272,7 +314,7 @@ describe('Integration: Ask Question Flow', () => {
       };
 
       const docPath = path.join(testDataDir, `${testDocId}.json`);
-      await fs.writeJSON(docPath, testDoc);
+      await writeJSON(docPath, testDoc);
 
       // Mock retrieval to return cat-related chunks for cat question
       (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -297,7 +339,7 @@ describe('Integration: Ask Question Flow', () => {
       });
 
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = (await response.json()) as AskResponse;
       expect(data.sources.length).toBeGreaterThan(0);
       expect(data.sources.some(s => s.chunkId === 2)).toBe(true);
     });
@@ -322,14 +364,14 @@ describe('Integration: Ask Question Flow', () => {
       };
 
       const docPath = path.join(testDataDir, `${testDocId}.json`);
-      await fs.writeJSON(docPath, testDoc);
+      await writeJSON(docPath, testDoc);
 
       // Verify file exists
-      const exists = await fs.pathExists(docPath);
+      const exists = await pathExists(docPath);
       expect(exists).toBe(true);
 
       // Verify content
-      const loaded = await fs.readJSON(docPath);
+      const loaded = await readJSON<TestDocument>(docPath);
       expect(loaded.metadata.filename).toBe('existing.pdf');
       expect(loaded.chunks.length).toBe(1);
     });
@@ -354,9 +396,9 @@ describe('Integration: Ask Question Flow', () => {
       };
 
       const docPath = path.join(testDataDir, `${testDocId}.json`);
-      await fs.writeJSON(docPath, testDoc);
+      await writeJSON(docPath, testDoc);
 
-      const loaded = await fs.readJSON(docPath);
+      const loaded = await readJSON<TestDocument>(docPath);
       expect(loaded.chunks.length).toBe(50);
       expect(loaded.chunks[0].id).toBe(0);
       expect(loaded.chunks[49].id).toBe(49);
