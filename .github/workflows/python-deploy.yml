@@ -4,11 +4,11 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'python-service/**'
+      - 'pythonservice/**'
       - '.github/workflows/python-deploy.yml'
 
 jobs:
-  deploy-python-service:
+  deploy-pythonservice:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,33 +21,33 @@ jobs:
         python-version: '3.11'
 
     - name: Install dependencies
-      working-directory: ./python-service
+      working-directory: ./pythonservice
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
     - name: Run tests
-      working-directory: ./python-service
+      working-directory: ./pythonservice
       run: python -m pytest --tb=short
 
     - name: Build Docker image
-      working-directory: ./python-service
+      working-directory: ./pythonservice
       run: |
-        docker build -t summarizer-python-service:${{ github.sha }} .
-        docker tag summarizer-python-service:${{ github.sha }} summarizer-python-service:latest
+        docker build -t summarizer-pythonservice:${{ github.sha }} .
+        docker tag summarizer-pythonservice:${{ github.sha }} summarizer-pythonservice:latest
 
     - name: Deploy to Railway (placeholder)
       run: |
         echo "Python service Docker image built successfully"
         echo "Ready for deployment to Railway, Render, or similar platform"
-        echo "Image: summarizer-python-service:${{ github.sha }}"
+        echo "Image: summarizer-pythonservice:${{ github.sha }}"
 
     - name: Upload Docker image artifact
       uses: actions/upload-artifact@v4
       with:
-        name: python-service-image
+        name: pythonservice-image
         path: |
-          python-service/
-          !python-service/test_data/
-          !python-service/data/
+          pythonservice/
+          !pythonservice/test_data/
+          !pythonservice/data/
         retention-days: 7

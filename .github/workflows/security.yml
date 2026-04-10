@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./python-service
+        working-directory: ./pythonservice
 
     steps:
     - name: Checkout code
@@ -68,7 +68,7 @@ jobs:
       with:
         name: python-security-reports
         path: |
-          python-service/bandit-report.json
+          pythonservice/bandit-report.json
         retention-days: 7
 
   nextjs-security:

@@ -7,11 +7,11 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  test-python-service:
+  test-pythonservice:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./python-service
+        working-directory: ./pythonservice
 
     steps:
     - name: Checkout code
@@ -26,7 +26,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('python-service/requirements.txt') }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('pythonservice/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
 
@@ -43,7 +43,7 @@ jobs:
       if: always()
       with:
         name: python-test-results
-        path: python-service/test-results.xml
+        path: pythonservice/test-results.xml
         retention-days: 7
 
   test-nextjs-app:
@@ -82,7 +82,7 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
-    needs: [test-python-service, test-nextjs-app]
+    needs: [test-pythonservice, test-nextjs-app]
 
     steps:
     - name: Checkout code
@@ -99,7 +99,7 @@ jobs:
         node-version: '18'
 
     - name: Install Python dependencies
-      working-directory: ./python-service
+      working-directory: ./pythonservice
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
@@ -111,7 +111,7 @@ jobs:
     - name: Run integration tests
       run: |
         # Start Python service in background
-        cd python-service
+        cd pythonservice
         python app.py &
         PYTHON_PID=$!
 
@@ -132,7 +132,7 @@ jobs:
         name: integration-test-results
         path: |
           web-app/test-results/
-          python-service/test-results/
+          pythonservice/test-results/
         retention-days: 7
 
   build-and-deploy:
