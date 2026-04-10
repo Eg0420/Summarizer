@@ -59,7 +59,7 @@ class TestPDFProcessing:
         pdf_file = create_minimal_pdf()
         
         response = client.post(
-            '/api/process',
+            '/api/summarize',
             data={'file': (pdf_file, 'test.pdf')},
             content_type='multipart/form-data'
         )
@@ -76,7 +76,7 @@ class TestPDFProcessing:
         text_file = BytesIO(b"This is not a PDF")
         
         response = client.post(
-            '/api/process',
+            '/api/summarize',
             data={'file': (text_file, 'test.txt')},
             content_type='multipart/form-data'
         )
@@ -87,7 +87,7 @@ class TestPDFProcessing:
     def test_reject_missing_file(self, client):
         """Test that requests without a file are rejected."""
         response = client.post(
-            '/api/process',
+            '/api/summarize',
             content_type='multipart/form-data'
         )
         

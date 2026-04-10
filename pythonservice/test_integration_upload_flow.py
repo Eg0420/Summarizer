@@ -50,7 +50,7 @@ class TestUploadToProcessFlow:
         # Step 1: Upload PDF
         with open(test_pdf_path, 'rb') as f:
             response = client.post(
-                '/api/process',
+                '/api/summarize',
                 data={'file': f},
                 content_type='multipart/form-data'
             )
@@ -104,7 +104,7 @@ class TestUploadToProcessFlow:
         # Upload and process
         with open(test_pdf_path, 'rb') as f:
             response = client.post(
-                '/api/process',
+                '/api/summarize',
                 data={'file': f},
                 content_type='multipart/form-data'
             )
@@ -137,7 +137,7 @@ class TestUploadToProcessFlow:
         for _ in range(2):
             with open(test_pdf_path, 'rb') as f:
                 response = client.post(
-                    '/api/process',
+                    '/api/summarize',
                     data={'file': f},
                     content_type='multipart/form-data'
                 )
@@ -170,7 +170,7 @@ class TestUploadToProcessFlow:
         for _ in range(2):
             with open(test_pdf_path, 'rb') as f:
                 response = client.post(
-                    '/api/process',
+                    '/api/summarize',
                     data={'file': f},
                     content_type='multipart/form-data'
                 )
