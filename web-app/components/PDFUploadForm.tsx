@@ -33,6 +33,7 @@ export default function PDFUploadForm() {
 
         <form className="space-y-6">
           <div
+            data-testid="pdf-drop-zone"
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -48,6 +49,7 @@ export default function PDFUploadForm() {
             <p className="text-sm text-gray-500 mt-2">or</p>
             <label className="mt-4 inline-block">
               <input
+                data-testid="pdf-file-input"
                 type="file"
                 accept=".pdf"
                 className="hidden"
