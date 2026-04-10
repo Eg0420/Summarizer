@@ -1,0 +1,53 @@
+name: Python Service Deploy
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'python-service/**'
+      - '.github/workflows/python-deploy.yml'
+
+jobs:
+  deploy-python-service:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      working-directory: ./python-service
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run tests
+      working-directory: ./python-service
+      run: python -m pytest --tb=short
+
+    - name: Build Docker image
+      working-directory: ./python-service
+      run: |
+        docker build -t summarizer-python-service:${{ github.sha }} .
+        docker tag summarizer-python-service:${{ github.sha }} summarizer-python-service:latest
+
+    - name: Deploy to Railway (placeholder)
+      run: |
+        echo "Python service Docker image built successfully"
+        echo "Ready for deployment to Railway, Render, or similar platform"
+        echo "Image: summarizer-python-service:${{ github.sha }}"
+
+    - name: Upload Docker image artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: python-service-image
+        path: |
+          python-service/
+          !python-service/test_data/
+          !python-service/data/
+        retention-days: 7

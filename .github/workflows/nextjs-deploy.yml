@@ -1,0 +1,53 @@
+name: Next.js Deploy
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'web-app/**'
+      - '.github/workflows/nextjs-deploy.yml'
+
+jobs:
+  deploy-nextjs-app:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./web-app
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: web-app/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run linting
+      run: npm run lint
+
+    - name: Run tests
+      run: npm run test -- --watchAll=false
+
+    - name: Build Next.js app
+      run: npm run build
+
+    - name: Deploy to Vercel (placeholder)
+      run: |
+        echo "Next.js app built successfully"
+        echo "Ready for deployment to Vercel"
+        echo "Build output in web-app/.next/"
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: nextjs-production-build
+        path: |
+          web-app/.next/
+          web-app/public/
+        retention-days: 7
