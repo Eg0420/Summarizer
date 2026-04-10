@@ -39,7 +39,7 @@ jobs:
       run: python -m pytest --tb=short -v
 
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: python-test-results
@@ -73,7 +73,7 @@ jobs:
       run: npm run test -- --coverage --watchAll=false
 
     - name: Upload coverage reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: nextjs-coverage
@@ -126,7 +126,7 @@ jobs:
         kill $PYTHON_PID
 
     - name: Upload integration test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: integration-test-results
@@ -166,7 +166,7 @@ jobs:
         echo "Python service ready for deployment to Railway, Render, or Fly.io"
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: nextjs-build
         path: web-app/.next/

@@ -43,7 +43,7 @@ jobs:
         echo "Image: summarizer-python-service:${{ github.sha }}"
 
     - name: Upload Docker image artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: python-service-image
         path: |
