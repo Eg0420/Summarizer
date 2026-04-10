@@ -2,7 +2,7 @@ flask==2.3.3
 werkzeug==2.3.7
 python-dotenv==1.0.0
 pytest==7.4.0
-pytest-cov==4.1.0
+pytest-cov==7.1.0
 requests==2.31.0
 pymupdf==1.23.0
 openai==0.28.0
