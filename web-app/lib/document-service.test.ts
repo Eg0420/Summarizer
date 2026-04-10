@@ -45,4 +45,25 @@ describe('document-service', () => {
       'Document not found'
     );
   });
+
+  it('loads a document from the legacy pythonservice data directory', async () => {
+    const mockDocument = {
+      documentId: 'legacy-id',
+      filename: 'legacy.pdf',
+      chunks: [{ id: 0, text: 'Legacy document content.' }],
+    };
+
+    (fs.existsSync as jest.Mock).mockImplementation((filePath: string) =>
+      filePath.includes('pythonservice')
+    );
+    (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(mockDocument));
+
+    const result = await readAndSummarizeDocument('legacy-id');
+
+    expect(result.filename).toBe('legacy.pdf');
+    expect(fs.readFileSync).toHaveBeenCalledWith(
+      expect.stringContaining('pythonservice'),
+      'utf-8'
+    );
+  });
 });

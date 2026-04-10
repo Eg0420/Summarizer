@@ -85,7 +85,7 @@ export default function PDFUploadForm() {
 
       setProcessResult(processed);
 
-      const summaryResponse = await fetch('/api/summarize', {
+      const summaryResponse = await fetch('/api/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentId: processed.documentId }),

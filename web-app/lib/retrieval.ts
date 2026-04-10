@@ -1,8 +1,6 @@
 import fs from 'fs';
-import path from 'path';
 import { embedText } from './llm';
-
-const DATA_GOLD_DIR = process.env.DATA_GOLD_DIR || path.join(process.cwd(), '..', 'data', 'gold');
+import { resolveDocumentPath } from './document-storage';
 
 interface Chunk {
   id: number;
@@ -44,12 +42,7 @@ export function cosineSimilarity(vec1: number[], vec2: number[]): number {
  * Load document from /data/gold
  */
 function loadDocument(documentId: string): Document {
-  const filePath = path.join(DATA_GOLD_DIR, `${documentId}.json`);
-
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`Document not found: ${documentId}`);
-  }
-
+  const filePath = resolveDocumentPath(documentId);
   const content = fs.readFileSync(filePath, 'utf-8');
   return JSON.parse(content);
 }

@@ -90,5 +90,29 @@ describe('Retrieval Engine', () => {
         retrieveRelevantChunks('nonexistent-id', 'Question?', 5)
       ).rejects.toThrow();
     });
+
+    it('loads chunks from the legacy pythonservice data directory', async () => {
+      const mockDocument = {
+        documentId: 'legacy-id',
+        chunks: [
+          { id: 0, text: 'Legacy chunk.', embedding: [0.1, 0.2, 0.3] },
+        ],
+      };
+      const mockEmbedText = jest.requireMock('./llm').embedText;
+
+      (fs.existsSync as jest.Mock).mockImplementation((filePath: string) =>
+        filePath.includes('pythonservice')
+      );
+      (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(mockDocument));
+      mockEmbedText.mockResolvedValue([0.1, 0.2, 0.3]);
+
+      const result = await retrieveRelevantChunks('legacy-id', 'Question?', 1);
+
+      expect(result).toHaveLength(1);
+      expect(fs.readFileSync).toHaveBeenCalledWith(
+        expect.stringContaining('pythonservice'),
+        'utf-8'
+      );
+    });
   });
 });

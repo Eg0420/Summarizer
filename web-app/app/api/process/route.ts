@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const outboundForm = new FormData();
     outboundForm.append('file', file, file.name);
 
-    const response = await fetch(`${getPythonApiUrl()}/api/process`, {
+    const response = await fetch(`${getPythonApiUrl()}/api/summarize`, {
       method: 'POST',
       body: outboundForm,
     });

@@ -24,7 +24,7 @@ DATA_DIRS = {
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@app.route('/api/process', methods=['POST'])
+@app.route('/api/summarize', methods=['POST'])
 def process_pdf():
     """Receive PDF file, process it (extract text, chunk, embed), and return metadata."""
     if 'file' not in request.files:
