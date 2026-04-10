@@ -1,6 +1,7 @@
 /**
  * LLM utilities for summarization and Q&A
  */
+import { trackTokenUsage } from './token-tracking';
 
 export interface LLMResult {
   summary?: string;
@@ -19,6 +20,10 @@ export async function embedText(text: string): Promise<number[]> {
   //   input: text,
   // });
   // return response.data[0].embedding;
+  
+  // Track embedding tokens
+  const tokensUsed = estimateTokenCount(text);
+  trackTokenUsage('embedding', tokensUsed);
   
   // For now, return a deterministic mock embedding based on text
   const hash = hashString(text);
@@ -57,6 +62,7 @@ export async function summarizeChunks(text: string): Promise<{ summary: string; 
   // For now, return a simple mock summary
   const summary = generateMockSummary(text);
   const tokensUsed = estimateTokenCount(text);
+  trackTokenUsage('completion', tokensUsed);
   
   return { summary, tokensUsed };
 }
@@ -74,6 +80,7 @@ export async function answerQuestion(
   const context = contextChunks.join('\n\n');
   const answer = generateMockAnswer(question, context);
   const tokensUsed = estimateTokenCount(question + context);
+  trackTokenUsage('completion', tokensUsed);
   
   return { answer, tokensUsed };
 }

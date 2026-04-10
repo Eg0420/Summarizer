@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { getRemainingQuota } from '@/lib/token-tracking';
 
 interface Message {
   id: string;
@@ -13,7 +14,17 @@ export default function QAChat({ documentId }: { documentId: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [tokensUsed, setTokensUsed] = useState(0);
+  const [questionsRemaining, setQuestionsRemaining] = useState(20);
+  const [rateLimitError, setRateLimitError] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
+
+  // Update quota display
+  useEffect(() => {
+    const quota = getRemainingQuota();
+    setTokensUsed(quota.tokensUsed);
+    setQuestionsRemaining(quota.questionsRemaining);
+  }, [messages]);
 
   const scrollToBottom = () => {
     if (endRef.current?.scrollIntoView) {
@@ -28,6 +39,14 @@ export default function QAChat({ documentId }: { documentId: string }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
+
+    // Check if rate limit will be exceeded
+    if (questionsRemaining <= 0) {
+      setRateLimitError('Question limit reached for this session');
+      return;
+    }
+
+    setRateLimitError('');
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -51,6 +70,10 @@ export default function QAChat({ documentId }: { documentId: string }) {
 
       const data = await response.json();
 
+      if (response.status === 429) {
+        setRateLimitError(data.error || 'Rate limit exceeded');
+      }
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -68,11 +91,28 @@ export default function QAChat({ documentId }: { documentId: string }) {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setLoading(false);
+      // Update quota after request
+      const quota = getRemainingQuota();
+      setTokensUsed(quota.tokensUsed);
+      setQuestionsRemaining(quota.questionsRemaining);
     }
   };
 
   return (
-    <div className="flex flex-col h-96 border rounded-lg bg-white">
+    <div className="flex flex-col h-full border rounded-lg bg-white">
+      {/* Token usage header */}
+      <div className="bg-gray-50 border-b px-4 py-3 text-xs">
+        <div className="flex justify-between">
+          <span>Tokens used: <strong>{tokensUsed}</strong></span>
+          <span>Questions remaining: <strong>{questionsRemaining}</strong></span>
+        </div>
+        {rateLimitError && (
+          <div className="mt-2 text-red-600 font-semibold">
+            {rateLimitError}
+          </div>
+        )}
+      </div>
+
       {/* Messages container */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
