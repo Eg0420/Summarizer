@@ -5,3 +5,4 @@ python-dotenv==1.2.1
 pymupdf==1.27.2.2
 gunicorn==23.0.0
 pytest==9.0.3
+PyPDF2==3.0.1

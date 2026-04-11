@@ -5,6 +5,7 @@ import uuid
 import tempfile
 from werkzeug.utils import secure_filename
 from etl_pipeline import process_pdf_to_embeddings
+from PyPDF2 import PdfReader
 
 app = Flask(__name__)
 CORS(app)
@@ -52,36 +53,38 @@ def process_pdf():
             file.save(tmp.name)
             tmp_path = tmp.name
 
-        # Process PDF
+        # Process PDF (your existing pipeline)
         result = process_pdf_to_embeddings(
             pdf_path=tmp_path,
             doc_id=doc_id,
             data_dirs=DATA_DIRS,
             original_filename=filename
         )
-        print("DEBUG RESULT:", result)
-        # Clean up temp file
-        if os.path.exists(tmp_path):
-            os.unlink(tmp_path)
 
-        # ✅ FIX: Generate summary from CHUNKS (not text)
+        print("DEBUG RESULT:", result)
+
+        # ✅ FIX: Extract text directly from PDF
         summary = ""
 
         try:
-            chunks = result.get("chunks") or []
+            reader = PdfReader(tmp_path)
+            full_text = ""
 
-            if chunks and isinstance(chunks, list):
-                combined_text = " ".join(
-                    chunk.get("text", "") for chunk in chunks if isinstance(chunk, dict)
-                )
+            for page in reader.pages:
+                full_text += page.extract_text() or ""
 
-                summary = combined_text[:200].strip() if combined_text else "No text extracted from PDF"
+            if full_text:
+                summary = full_text[:200].strip()
             else:
                 summary = "No text extracted from PDF"
 
         except Exception as e:
             print("SUMMARY ERROR:", str(e))
             summary = "Summary generation failed"
+
+        # ✅ NOW delete file (after reading it)
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
         return jsonify({
             **result,
