@@ -64,19 +64,18 @@ def process_pdf():
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
 
-        # ✅ Generate summary from extracted text
+        # ✅ FIX: Generate summary from CHUNKS (not text)
         summary = ""
 
         try:
-            text = (
-                result.get("text") or
-                result.get("full_text") or
-                result.get("content") or
-                ""
-            )
+            chunks = result.get("chunks") or []
 
-            if text:
-                summary = text[:200].strip()
+            if chunks and isinstance(chunks, list):
+                combined_text = " ".join(
+                    chunk.get("text", "") for chunk in chunks if isinstance(chunk, dict)
+                )
+
+                summary = combined_text[:200].strip() if combined_text else "No text extracted from PDF"
             else:
                 summary = "No text extracted from PDF"
 
