@@ -1,3 +1,5 @@
+from unittest import result
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
@@ -64,7 +66,13 @@ def process_pdf():
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
 
-        return jsonify(result), 200
+        
+        summary = result.get("summary") or "Summary not generated"
+
+        return jsonify({
+            **result,
+            "summary": summary
+        }), 200
 
     except Exception as e:
         # ✅ FIX 4: Better error visibility for debugging

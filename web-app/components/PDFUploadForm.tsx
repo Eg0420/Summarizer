@@ -87,20 +87,12 @@ export default function PDFUploadForm() {
 
       setProcessResult(processed);
 
-      // ✅ STEP 2: Get summary (JSON)
-      const summaryResponse = await fetch('/api/summarize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentId: processed.documentId }),
+      setSummaryResult({
+        documentId: processed.documentId,
+        filename: processed.filename,
+        summary: processed.summary,
+        tokensUsed: 0,
       });
-
-      const summary = await summaryResponse.json();
-
-      if (!summaryResponse.ok) {
-        throw new Error(summary.error || 'Summary generation failed');
-      }
-
-      setSummaryResult(summary);
 
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : 'Upload failed');
