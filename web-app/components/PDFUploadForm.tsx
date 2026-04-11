@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
-import QAChat from './QAChat';
 
 interface ProcessResult {
   documentId: string;
@@ -186,10 +185,6 @@ export default function PDFUploadForm() {
               <p className="mt-4 text-gray-800" data-testid="summary">
                 Document Summary: {summaryResult.summary}
               </p>
-            </div>
-
-            <div className="h-96">
-              <QAChat documentId={summaryResult.documentId} />
             </div>
           </section>
         )}

@@ -66,21 +66,27 @@ def process_pdf():
         # ✅ FIX: Extract text directly from PDF
         summary = ""
 
-        try:
-            reader = PdfReader(tmp_path)
-            full_text = ""
+    try:
+        reader = PdfReader(tmp_path)
+        full_text = ""
 
-            for page in reader.pages:
-                full_text += page.extract_text() or ""
+        for page in reader.pages:
+            full_text += page.extract_text() or ""
 
-            if full_text:
-                summary = full_text[:200].strip()
-            else:
-                summary = "No text extracted from PDF"
+        if full_text:
+        # ✅ Real summary (first 2 sentences)
+            sentences = full_text.split(". ")
+            summary = ". ".join(sentences[:2]).strip()
 
-        except Exception as e:
-            print("SUMMARY ERROR:", str(e))
-            summary = "Summary generation failed"
+        if not summary.endswith("."):
+            summary += "."
+        else:
+            summary = "No text extracted from PDF"
+
+    except Exception as e:
+        print("SUMMARY ERROR:", str(e))
+        summary = "Summary generation failed"
+
 
         # ✅ NOW delete file (after reading it)
         if os.path.exists(tmp_path):
