@@ -1,8 +1,12 @@
 import pytest
-import tempfile
-import os
 from io import BytesIO
+import os
+
+# ✅ Disable AI for tests
+os.environ["USE_AI"] = "false"
+
 from app import app
+
 
 @pytest.fixture
 def client():
@@ -10,6 +14,7 @@ def client():
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
+
 
 def create_minimal_pdf():
     """Generate a minimal valid PDF in memory."""
@@ -51,52 +56,55 @@ startxref
 %%EOF"""
     return BytesIO(pdf_content)
 
+
 class TestPDFProcessing:
-    """Test suite for PDF processing endpoint."""
-    
+
     def test_upload_pdf_returns_200(self, client):
-        """Test that uploading a PDF returns 200 and document metadata."""
         pdf_file = create_minimal_pdf()
-        
+
         response = client.post(
             '/api/summarize',
             data={'file': (pdf_file, 'test.pdf')},
             content_type='multipart/form-data'
         )
-        
+
         assert response.status_code == 200
         data = response.get_json()
+
         assert data['documentId'] is not None
         assert data['filename'] == 'test.pdf'
         assert data['textLength'] > 0
         assert data['chunkCount'] > 0
-    
+
+        # ✅ NEW: ensure summary exists
+        assert 'summary' in data
+
+
     def test_reject_non_pdf_file(self, client):
-        """Test that non-PDF files are rejected."""
         text_file = BytesIO(b"This is not a PDF")
-        
+
         response = client.post(
             '/api/summarize',
             data={'file': (text_file, 'test.txt')},
             content_type='multipart/form-data'
         )
-        
+
         assert response.status_code == 400
         assert 'error' in response.get_json()
-    
+
+
     def test_reject_missing_file(self, client):
-        """Test that requests without a file are rejected."""
         response = client.post(
             '/api/summarize',
             content_type='multipart/form-data'
         )
-        
+
         assert response.status_code == 400
         assert 'error' in response.get_json()
-    
+
+
     def test_health_check(self, client):
-        """Test that health endpoint is reachable."""
         response = client.get('/health')
-        
+
         assert response.status_code == 200
         assert response.get_json()['status'] == 'healthy'

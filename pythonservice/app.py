@@ -6,9 +6,14 @@ import tempfile
 from werkzeug.utils import secure_filename
 from etl_pipeline import process_pdf_to_embeddings
 from PyPDF2 import PdfReader
+from openai import OpenAI
 
 app = Flask(__name__)
 CORS(app)
+
+# ✅ OpenAI client (safe init)
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'pdf'}
@@ -60,7 +65,7 @@ def process_pdf():
 
         print("DEBUG RESULT:", result)
 
-        # ✅ Summary generation (FIXED INDENTATION)
+        # 🔥 SUMMARY LOGIC (AI + fallback)
         try:
             reader = PdfReader(tmp_path)
             full_text = ""
@@ -68,20 +73,47 @@ def process_pdf():
             for page in reader.pages:
                 full_text += page.extract_text() or ""
 
-            if full_text:
-                sentences = full_text.split(". ")
-                summary = ". ".join(sentences[:2]).strip()
-
-                if not summary.endswith("."):
-                    summary += "."
-            else:
+            if not full_text:
                 summary = "No text extracted from PDF"
+
+            else:
+                # ✅ Check if we should use AI
+                use_ai = os.environ.get("USE_AI", "true").lower() == "true"
+
+                if use_ai and client:
+                    # 🔥 AI summary
+                    trimmed_text = full_text[:3000]
+
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "You are a helpful assistant that summarizes documents clearly and concisely."
+                            },
+                            {
+                                "role": "user",
+                                "content": f"Summarize this document:\n\n{trimmed_text}"
+                            }
+                        ],
+                        max_tokens=150
+                    )
+
+                    summary = response.choices[0].message.content.strip()
+
+                else:
+                    # ✅ Fallback (used in tests)
+                    sentences = full_text.split(". ")
+                    summary = ". ".join(sentences[:2]).strip()
+
+                    if not summary.endswith("."):
+                        summary += "."
 
         except Exception as e:
             print("SUMMARY ERROR:", str(e))
             summary = "Summary generation failed"
 
-        # ✅ Delete file AFTER reading
+        # Delete temp file
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
 
