@@ -10,10 +10,9 @@ from PyPDF2 import PdfReader
 app = Flask(__name__)
 CORS(app)
 
-app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB max
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'pdf'}
 
-# Data directories
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_DIR = os.path.dirname(BASE_DIR)
 DATA_DIRS = {
@@ -27,11 +26,9 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-# ✅ Support BOTH routes (tests + frontend)
 @app.route('/api/process', methods=['POST'])
 @app.route('/api/summarize', methods=['POST'])
 def process_pdf():
-    """Receive PDF file, process it, and return metadata + summary."""
 
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
@@ -53,7 +50,7 @@ def process_pdf():
             file.save(tmp.name)
             tmp_path = tmp.name
 
-        # Process PDF (your existing pipeline)
+        # Process PDF
         result = process_pdf_to_embeddings(
             pdf_path=tmp_path,
             doc_id=doc_id,
@@ -63,32 +60,28 @@ def process_pdf():
 
         print("DEBUG RESULT:", result)
 
-        # ✅ FIX: Extract text directly from PDF
-        summary = ""
+        # ✅ Summary generation (FIXED INDENTATION)
+        try:
+            reader = PdfReader(tmp_path)
+            full_text = ""
 
-    try:
-        reader = PdfReader(tmp_path)
-        full_text = ""
+            for page in reader.pages:
+                full_text += page.extract_text() or ""
 
-        for page in reader.pages:
-            full_text += page.extract_text() or ""
+            if full_text:
+                sentences = full_text.split(". ")
+                summary = ". ".join(sentences[:2]).strip()
 
-        if full_text:
-        # ✅ Real summary (first 2 sentences)
-            sentences = full_text.split(". ")
-            summary = ". ".join(sentences[:2]).strip()
+                if not summary.endswith("."):
+                    summary += "."
+            else:
+                summary = "No text extracted from PDF"
 
-        if not summary.endswith("."):
-            summary += "."
-        else:
-            summary = "No text extracted from PDF"
+        except Exception as e:
+            print("SUMMARY ERROR:", str(e))
+            summary = "Summary generation failed"
 
-    except Exception as e:
-        print("SUMMARY ERROR:", str(e))
-        summary = "Summary generation failed"
-
-
-        # ✅ NOW delete file (after reading it)
+        # ✅ Delete file AFTER reading
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
 
