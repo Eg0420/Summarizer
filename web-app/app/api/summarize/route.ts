@@ -3,28 +3,47 @@ import { readAndSummarizeDocument } from '@/lib/document-service';
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { documentId } = body;
-
-    if (!documentId) {
+    // ✅ Safe JSON parsing
+    let body;
+    try {
+      body = await req.json();
+    } catch {
       return NextResponse.json(
-        { error: 'documentId is required' },
+        { error: 'Invalid JSON body' },
         { status: 400 }
       );
     }
 
+    const documentId = body?.documentId;
+
+    // ✅ Strong validation
+    if (!documentId || typeof documentId !== 'string' || documentId.trim() === '') {
+      return NextResponse.json(
+        { error: 'Valid documentId is required' },
+        { status: 400 }
+      );
+    }
+
+    // ✅ Call your service
     const result = await readAndSummarizeDocument(documentId);
 
     return NextResponse.json(result, { status: 200 });
-  } catch (error: any) {
-    if (error.message.includes('not found')) {
+
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+
+    // ✅ Better error detection
+    if (message.toLowerCase().includes('not found')) {
       return NextResponse.json(
         { error: 'Document not found' },
         { status: 404 }
       );
     }
+
+    console.error('Summarize error:', message);
+
     return NextResponse.json(
-      { error: error.message },
+      { error: message },
       { status: 500 }
     );
   }

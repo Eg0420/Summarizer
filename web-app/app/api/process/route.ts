@@ -9,6 +9,7 @@ function getPythonApiUrl() {
 }
 
 export async function POST(req: NextRequest) {
+  // 🚫 Prevent missing backend in production
   if (process.env.VERCEL && !process.env.PYTHON_API_URL) {
     return NextResponse.json(
       { error: 'PDF processing backend is not configured. Set PYTHON_API_URL in Vercel.' },
@@ -17,9 +18,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // ✅ Read incoming form data
     const incomingForm = await req.formData();
     const file = incomingForm.get('file');
 
+    // ✅ Validate file
     if (!(file instanceof File)) {
       return NextResponse.json(
         { error: 'PDF file is required' },
@@ -34,18 +37,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const outboundForm = new FormData();
-    outboundForm.append('file', file, file.name);
+    // 🔥 CRITICAL FIX: Convert file to buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    const response = await fetch(`${getPythonApiUrl()}/api/summarize`, {
+    // 🔥 Recreate proper multipart/form-data
+    const outboundForm = new FormData();
+    outboundForm.append(
+      'file',
+      new Blob([buffer], { type: 'application/pdf' }),
+      file.name
+    );
+
+    // ✅ Send to Flask backend
+    const response = await fetch(`${getPythonApiUrl()}/api/process`, {
       method: 'POST',
       body: outboundForm,
     });
 
-    const data = await response.json();
+    // Handle non-JSON safely
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      data = { error: 'Invalid response from backend' };
+    }
+
     return NextResponse.json(data, { status: response.status });
+
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown processing error';
+
     return NextResponse.json(
       { error: `Could not process PDF: ${message}` },
       { status: 502 }

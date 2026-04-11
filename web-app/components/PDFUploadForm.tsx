@@ -70,13 +70,15 @@ export default function PDFUploadForm() {
     setIsUploading(true);
 
     try {
+      // ✅ STEP 1: Upload PDF (FormData)
       const formData = new FormData();
       formData.append('file', selectedFile);
 
       const processResponse = await fetch('/api/process', {
         method: 'POST',
-        body: formData,
+        body: formData, // 🚨 NO headers
       });
+
       const processed = await processResponse.json();
 
       if (!processResponse.ok) {
@@ -85,11 +87,13 @@ export default function PDFUploadForm() {
 
       setProcessResult(processed);
 
-      const summaryResponse = await fetch('/api/process', {
+      // ✅ STEP 2: Get summary (JSON)
+      const summaryResponse = await fetch('/api/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentId: processed.documentId }),
       });
+
       const summary = await summaryResponse.json();
 
       if (!summaryResponse.ok) {
@@ -97,6 +101,7 @@ export default function PDFUploadForm() {
       }
 
       setSummaryResult(summary);
+
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : 'Upload failed');
     } finally {
