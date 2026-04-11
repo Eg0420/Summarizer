@@ -1,5 +1,3 @@
-from unittest import result
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
@@ -23,17 +21,17 @@ DATA_DIRS = {
     'gold': os.environ.get('DATA_GOLD_DIR', os.path.join(REPO_DIR, 'data', 'gold')),
 }
 
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-# ✅ FIX 1: Support BOTH routes (tests + frontend)
+# ✅ Support BOTH routes (tests + frontend)
 @app.route('/api/process', methods=['POST'])
 @app.route('/api/summarize', methods=['POST'])
 def process_pdf():
-    """Receive PDF file, process it, and return metadata."""
+    """Receive PDF file, process it, and return metadata + summary."""
 
-    # ✅ FIX 2: Better validation (avoids 500 errors)
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
 
@@ -49,7 +47,7 @@ def process_pdf():
         filename = secure_filename(file.filename)
         doc_id = str(uuid.uuid4())
 
-        # ✅ FIX 3: Safe temp file handling
+        # Save temp file
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
             file.save(tmp.name)
             tmp_path = tmp.name
@@ -66,8 +64,25 @@ def process_pdf():
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
 
-        
-        summary = result.get("summary") or "Summary not generated"
+        # ✅ Generate summary from extracted text
+        summary = ""
+
+        try:
+            text = (
+                result.get("text") or
+                result.get("full_text") or
+                result.get("content") or
+                ""
+            )
+
+            if text:
+                summary = text[:200].strip()
+            else:
+                summary = "No text extracted from PDF"
+
+        except Exception as e:
+            print("SUMMARY ERROR:", str(e))
+            summary = "Summary generation failed"
 
         return jsonify({
             **result,
@@ -75,7 +90,6 @@ def process_pdf():
         }), 200
 
     except Exception as e:
-        # ✅ FIX 4: Better error visibility for debugging
         print("ERROR:", str(e))
         return jsonify({'error': f'Processing failed: {str(e)}'}), 500
 
