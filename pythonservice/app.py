@@ -59,7 +59,7 @@ def process_pdf():
             data_dirs=DATA_DIRS,
             original_filename=filename
         )
-
+        print("DEBUG RESULT:", result)
         # Clean up temp file
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
