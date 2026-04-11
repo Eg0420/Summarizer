@@ -184,7 +184,7 @@ export default function PDFUploadForm() {
                 {processResult.chunkCount} chunks, {processResult.textLength} characters
               </p>
               <p className="mt-4 text-gray-800" data-testid="summary">
-                {summaryResult.summary}
+                Document Summary: {summaryResult.summary}
               </p>
             </div>
 
