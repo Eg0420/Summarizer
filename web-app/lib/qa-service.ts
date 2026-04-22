@@ -19,6 +19,8 @@ export async function answerQuestion(
   k: number = 5
 ): Promise<QAResult> {
   try {
+    console.log('QA REQUEST:', { documentId, question });
+
     // ✅ Handle empty question
     if (!question.trim()) {
       return {
@@ -35,7 +37,9 @@ export async function answerQuestion(
       k
     );
 
-    // ✅ Handle no results (prevents hallucination)
+    console.log('Retrieved chunks:', relevantChunks);
+
+    // ✅ Handle no results
     if (!relevantChunks || relevantChunks.length === 0) {
       return {
         answer: 'No relevant information found in the document.',
@@ -44,7 +48,7 @@ export async function answerQuestion(
       };
     }
 
-    // ✅ Format context (VERY IMPORTANT)
+    // ✅ Format context
     const MAX_CHARS = 3000;
     let totalLength = 0;
     const contextChunks: string[] = [];
@@ -58,13 +62,36 @@ export async function answerQuestion(
       totalLength += formatted.length;
     }
 
-    // ✅ Call LLM
-    const { answer, tokensUsed } = await callLLM(
-      question,
-      contextChunks
-    );
+    console.log('Context sent to LLM:', contextChunks);
 
-    // ✅ Optional: filter hallucinated fallback
+    // ✅ Call LLM safely
+    let answer = '';
+    let tokensUsed = 0;
+
+    try {
+      const llmResult = await callLLM(question, contextChunks);
+      answer = llmResult.answer;
+      tokensUsed = llmResult.tokensUsed;
+    } catch (llmError) {
+      console.error('LLM ERROR:', llmError);
+
+      return {
+        answer: 'Error while generating answer from AI model.',
+        sources: [],
+        tokensUsed: 0,
+      };
+    }
+
+    // ✅ Handle empty answer
+    if (!answer) {
+      return {
+        answer: 'No answer generated.',
+        sources: [],
+        tokensUsed,
+      };
+    }
+
+    // ✅ Prevent hallucination fallback
     if (answer.toLowerCase().includes("i couldn't find")) {
       return {
         answer: 'This information is not available in the document.',
@@ -83,10 +110,12 @@ export async function answerQuestion(
       tokensUsed,
     };
   } catch (error) {
-    console.error('QA Service Error:', error);
+    console.error('QA SERVICE ERROR:', error);
 
     return {
-      answer: 'Something went wrong while processing your question.',
+      answer: `DEBUG ERROR: ${
+        error instanceof Error ? error.message : 'Unknown error'
+      }`,
       sources: [],
       tokensUsed: 0,
     };

@@ -51,7 +51,8 @@ describe('QA Service', () => {
       'Question?'
     );
 
-    expect(result.answer).toMatch(/Something went wrong/i);
+    // 🔥 UPDATED EXPECTATION
+    expect(result.answer).toMatch(/DEBUG ERROR/i);
     expect(result.sources).toEqual([]);
     expect(result.tokensUsed).toBe(0);
   });
