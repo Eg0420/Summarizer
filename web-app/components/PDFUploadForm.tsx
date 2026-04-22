@@ -16,7 +16,11 @@ interface SummaryResult {
   tokensUsed: number;
 }
 
-export default function PDFUploadForm() {
+export default function PDFUploadForm({
+  onUploadSuccess,
+}: {
+  onUploadSuccess: (documentId: string) => void;
+}) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [processResult, setProcessResult] = useState<ProcessResult | null>(null);
@@ -69,13 +73,12 @@ export default function PDFUploadForm() {
     setIsUploading(true);
 
     try {
-      // ✅ STEP 1: Upload PDF (FormData)
       const formData = new FormData();
       formData.append('file', selectedFile);
 
       const processResponse = await fetch('/api/process', {
         method: 'POST',
-        body: formData, // 🚨 NO headers
+        body: formData,
       });
 
       const processed = await processResponse.json();
@@ -85,6 +88,9 @@ export default function PDFUploadForm() {
       }
 
       setProcessResult(processed);
+
+      // 🔥 CRITICAL FIX — SEND documentId TO PARENT
+      onUploadSuccess(processed.documentId);
 
       setSummaryResult({
         documentId: processed.documentId,

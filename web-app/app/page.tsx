@@ -16,7 +16,11 @@ interface SummaryResult {
   tokensUsed: number;
 }
 
-export default function PDFUploadForm() {
+export default function PDFUploadForm({
+  onUploadSuccess,
+}: {
+  onUploadSuccess: (documentId: string) => void;
+}) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [processResult, setProcessResult] = useState<ProcessResult | null>(null);
@@ -69,13 +73,12 @@ export default function PDFUploadForm() {
     setIsUploading(true);
 
     try {
-      // ✅ STEP 1: Upload PDF (FormData)
       const formData = new FormData();
       formData.append('file', selectedFile);
 
       const processResponse = await fetch('/api/process', {
         method: 'POST',
-        body: formData, // 🚨 NO headers
+        body: formData,
       });
 
       const processed = await processResponse.json();
@@ -85,6 +88,9 @@ export default function PDFUploadForm() {
       }
 
       setProcessResult(processed);
+
+      // 🔥 THIS IS THE FIX (MOST IMPORTANT LINE)
+      onUploadSuccess(processed.documentId);
 
       setSummaryResult({
         documentId: processed.documentId,
@@ -153,21 +159,19 @@ export default function PDFUploadForm() {
           </div>
 
           {selectedFile && (
-            <p className="text-sm text-gray-700" data-testid="selected-file">
+            <p className="text-sm text-gray-700">
               Selected: <strong>{selectedFile.name}</strong>
             </p>
           )}
 
           {error && (
-            <p className="text-sm text-red-600 font-semibold" role="alert">
-              {error}
-            </p>
+            <p className="text-sm text-red-600 font-semibold">{error}</p>
           )}
 
           <button
             type="submit"
             disabled={!selectedFile || isUploading}
-            className="w-full px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-400"
+            className="w-full px-4 py-2 bg-gray-900 text-white rounded-lg"
           >
             {isUploading ? 'Processing...' : 'Process PDF'}
           </button>
@@ -176,13 +180,13 @@ export default function PDFUploadForm() {
         {processResult && summaryResult && (
           <section className="space-y-6">
             <div className="border rounded-lg bg-white p-4">
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold">
                 {summaryResult.filename}
               </h2>
               <p className="mt-2 text-sm text-gray-600">
                 {processResult.chunkCount} chunks, {processResult.textLength} characters
               </p>
-              <p className="mt-4 text-gray-800" data-testid="summary">
+              <p className="mt-4 text-gray-800">
                 Document Summary: {summaryResult.summary}
               </p>
             </div>
