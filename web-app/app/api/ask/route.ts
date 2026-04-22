@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { answerQuestion } from '@/lib/qa-service';
 import { checkAndEnforceRateLimit } from '@/lib/token-tracking';
-
+export const runtime = 'nodejs';
 export async function POST(req: NextRequest) {
   try {
     // Check rate limit before processing

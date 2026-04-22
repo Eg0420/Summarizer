@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     const documentId = data.documentId || randomUUID();
 
     // Ensure processed folder exists
-    const processedDir = path.join(process.cwd(), 'data', 'processed');
+    const processedDir = path.join(process.cwd(), '/tmp', 'processed');
 
     if (!fs.existsSync(processedDir)) {
       fs.mkdirSync(processedDir, { recursive: true });
