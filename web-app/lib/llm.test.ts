@@ -1,3 +1,4 @@
+process.env.OPENAI_API_KEY = 'test-key';
 jest.mock('openai', () => {
   return {
     __esModule: true, // 🔥 IMPORTANT
