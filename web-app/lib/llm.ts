@@ -1,13 +1,9 @@
 /**
- * LLM utilities for summarization and Q&A (REAL OpenAI Implementation)
+ * LLM utilities for summarization and Q&A (SAFE OpenAI Implementation)
  */
 
 import OpenAI from 'openai';
 import { trackTokenUsage } from './token-tracking';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 export interface LLMResult {
   summary?: string;
@@ -16,9 +12,24 @@ export interface LLMResult {
 }
 
 /**
+ * Create OpenAI client ONLY when needed (prevents build-time crash)
+ */
+function getOpenAI() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('Missing OPENAI_API_KEY');
+  }
+
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
+
+/**
  * Embed text using OpenAI API
  */
 export async function embedText(text: string): Promise<number[]> {
+  const openai = getOpenAI();
+
   const response = await openai.embeddings.create({
     model: 'text-embedding-3-small',
     input: text,
@@ -36,6 +47,8 @@ export async function embedText(text: string): Promise<number[]> {
 export async function summarizeChunks(
   text: string
 ): Promise<{ summary: string; tokensUsed: number }> {
+  const openai = getOpenAI();
+
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
@@ -69,6 +82,8 @@ export async function answerQuestion(
   question: string,
   contextChunks: string[]
 ): Promise<{ answer: string; tokensUsed: number }> {
+  const openai = getOpenAI();
+
   const context = contextChunks.join('\n\n');
 
   const response = await openai.chat.completions.create({
