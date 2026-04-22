@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
 import { randomUUID } from 'crypto';
+import { saveDocument } from '@/lib/document-storage';
 
 export const runtime = 'nodejs';
 
@@ -65,19 +64,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(data, { status: response.status });
     }
 
-    // 🔥 CRITICAL FIX STARTS HERE
-
-    // Generate documentId (if not provided)
+    // ✅ Generate documentId
     const documentId = data.documentId || randomUUID();
 
-    // Ensure processed folder exists
-    const processedDir = path.join(process.cwd(), '/tmp', 'processed');
-
-    if (!fs.existsSync(processedDir)) {
-      fs.mkdirSync(processedDir, { recursive: true });
-    }
-
-    // Expect chunks from Flask
+    // ✅ Extract chunks
     const chunks = data.chunks || [];
 
     if (!chunks || chunks.length === 0) {
@@ -87,14 +77,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Save chunks to file
-    const filePath = path.join(processedDir, `${documentId}.json`);
+    // 🔥 SAVE DOCUMENT (CLEAN + CENTRALIZED)
+    saveDocument(documentId, chunks);
 
-    fs.writeFileSync(filePath, JSON.stringify(chunks, null, 2));
+    console.log('✅ Saved document:', documentId);
 
-    console.log('Saved document:', documentId);
-
-    // Return structured response
+    // ✅ Return response
     return NextResponse.json({
       documentId,
       filename: file.name,

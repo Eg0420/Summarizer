@@ -1,31 +1,51 @@
 import fs from 'fs';
 import path from 'path';
 
-function uniquePaths(paths: string[]) {
-  return [...new Set(paths)];
+/**
+ * Base directory for storing processed documents (Vercel-compatible)
+ */
+const BASE_DIR = '/tmp/processed';
+
+/**
+ * Ensure the directory exists
+ */
+function ensureDirectoryExists() {
+  if (!fs.existsSync(BASE_DIR)) {
+    fs.mkdirSync(BASE_DIR, { recursive: true });
+  }
 }
 
-export function getGoldDataDirectories() {
-  const configuredDir = process.env.DATA_GOLD_DIR;
+/**
+ * Resolve the full file path for a document
+ */
+export function resolveDocumentPath(documentId: string): string {
+  const filePath = path.join(BASE_DIR, `${documentId}.json`);
 
-  return uniquePaths(
-    [
-      configuredDir,
-      path.join(process.cwd(), '..', 'data', 'gold'),
-      path.join(process.cwd(), '..', 'pythonservice', 'data', 'gold'),
-    ].filter((dir): dir is string => Boolean(dir))
-  );
-}
-
-export function resolveDocumentPath(documentId: string) {
-  const fileName = `${documentId}.json`;
-
-  for (const directory of getGoldDataDirectories()) {
-    const candidatePath = path.join(directory, fileName);
-    if (fs.existsSync(candidatePath)) {
-      return candidatePath;
-    }
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Document not found: ${documentId}`);
   }
 
-  throw new Error(`Document not found: ${documentId}`);
+  return filePath;
+}
+
+/**
+ * Save document chunks to storage
+ */
+export function saveDocument(documentId: string, data: any) {
+  ensureDirectoryExists();
+
+  const filePath = path.join(BASE_DIR, `${documentId}.json`);
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+
+  console.log(`✅ Document saved: ${filePath}`);
+}
+
+/**
+ * Load document from storage
+ */
+export function loadDocument(documentId: string) {
+  const filePath = resolveDocumentPath(documentId);
+
+  const content = fs.readFileSync(filePath, 'utf-8');
+  return JSON.parse(content);
 }

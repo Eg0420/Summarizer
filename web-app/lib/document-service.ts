@@ -1,44 +1,58 @@
-import fs from 'fs';
 import { summarizeChunks } from './llm';
-import { resolveDocumentPath } from './document-storage';
+import { loadDocument } from './document-storage';
 
-interface DocumentData {
-  documentId: string;
-  filename: string;
-  chunks: Array<{
-    id: number;
-    text: string;
-    embedding?: number[];
-    tokenCount?: number;
-  }>;
+interface Chunk {
+  id: number;
+  text: string;
+  embedding?: number[];
+  tokenCount?: number;
 }
 
 /**
- * Load document from /data/gold
+ * Normalize document format (handles multiple structures)
  */
-function loadDocument(documentId: string): DocumentData {
-  const filePath = resolveDocumentPath(documentId);
-  const content = fs.readFileSync(filePath, 'utf-8');
-  return JSON.parse(content);
+function normalizeChunks(raw: any): Chunk[] {
+  if (Array.isArray(raw)) {
+    return raw.map((c: any) => ({
+      id: c.chunkId ?? c.id,
+      text: c.text,
+      embedding: c.embedding,
+      tokenCount: c.tokenCount,
+    }));
+  }
+
+  if (raw.chunks) {
+    return raw.chunks.map((c: any) => ({
+      id: c.id ?? c.chunkId,
+      text: c.text,
+      embedding: c.embedding,
+      tokenCount: c.tokenCount,
+    }));
+  }
+
+  throw new Error('Invalid document format');
 }
 
 /**
  * Read document and generate summary
  */
 export async function readAndSummarizeDocument(documentId: string) {
-  const document = loadDocument(documentId);
-  
-  // Concatenate all chunk text
-  const allChunksText = document.chunks
-    .map((chunk) => chunk.text)
-    .join('\n\n');
-  
-  // Call LLM to summarize
+  // ✅ Load from centralized storage
+  const raw = loadDocument(documentId);
+  const chunks = normalizeChunks(raw);
+
+  if (!chunks || chunks.length === 0) {
+    throw new Error('No chunks found for document');
+  }
+
+  // ✅ Concatenate all chunk text
+  const allChunksText = chunks.map((chunk) => chunk.text).join('\n\n');
+
+  // ✅ Call LLM
   const { summary, tokensUsed } = await summarizeChunks(allChunksText);
-  
+
   return {
     documentId,
-    filename: document.filename,
     summary,
     tokensUsed,
   };

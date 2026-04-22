@@ -1,6 +1,5 @@
-import fs from 'fs';
-import path from 'path';
 import { embedText } from './llm';
+import { loadDocument } from './document-storage';
 
 interface Chunk {
   id: number;
@@ -30,29 +29,23 @@ export function cosineSimilarity(vec1: number[], vec2: number[]): number {
 }
 
 /**
- * Load document from Vercel temp storage
+ * Normalize chunk format (handles multiple input formats)
  */
-function loadDocument(documentId: string): Chunk[] {
-  const filePath = path.join('/tmp', 'processed', `${documentId}.json`);
-
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`Document not found: ${documentId}`);
-  }
-
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const parsed = JSON.parse(content);
-
-  // Handle BOTH formats safely
-  if (Array.isArray(parsed)) {
-    return parsed.map((c: any) => ({
+function normalizeChunks(raw: any): Chunk[] {
+  if (Array.isArray(raw)) {
+    return raw.map((c: any) => ({
       id: c.chunkId ?? c.id,
       text: c.text,
       embedding: c.embedding,
     }));
   }
 
-  if (parsed.chunks) {
-    return parsed.chunks;
+  if (raw.chunks) {
+    return raw.chunks.map((c: any) => ({
+      id: c.id ?? c.chunkId,
+      text: c.text,
+      embedding: c.embedding,
+    }));
   }
 
   throw new Error('Invalid document format');
@@ -66,14 +59,17 @@ export async function retrieveRelevantChunks(
   query: string,
   k: number = 5
 ): Promise<RetrievalResult[]> {
-  const chunks = loadDocument(documentId);
+  // ✅ Load from centralized storage
+  const raw = loadDocument(documentId);
+  const chunks = normalizeChunks(raw);
 
   if (!chunks || chunks.length === 0) {
     return [];
   }
 
-  // 🔥 If NO embeddings → fallback (important)
-  const hasEmbeddings = chunks[0].embedding && chunks[0].embedding.length > 0;
+  // 🔥 Fallback if embeddings missing
+  const hasEmbeddings =
+    chunks[0].embedding && chunks[0].embedding.length > 0;
 
   if (!hasEmbeddings) {
     console.log('⚠️ No embeddings found, using fallback retrieval');
@@ -107,12 +103,16 @@ export function getChunksByIds(
   documentId: string,
   chunkIds: number[]
 ): { id: number; text: string }[] {
-  const chunks = loadDocument(documentId);
+  const raw = loadDocument(documentId);
+  const chunks = normalizeChunks(raw);
 
   const chunkMap = new Map(chunks.map((c) => [c.id, c]));
 
   return chunkIds
     .map((id) => chunkMap.get(id))
     .filter((chunk) => chunk !== undefined)
-    .map((chunk) => ({ id: chunk!.id, text: chunk!.text }));
+    .map((chunk) => ({
+      id: chunk!.id,
+      text: chunk!.text,
+    }));
 }
