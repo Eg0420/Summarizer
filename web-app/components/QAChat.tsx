@@ -33,15 +33,16 @@ const QAChat = ({ documentId }: QAChatProps) => {
 
     const quota = tokenTracking.getRemainingQuota();
 
-    // Rate limit check
     if (quota.questionsRemaining <= 0) {
       setError('Question limit reached for this session');
       return;
     }
 
+    const question = input; // ✅ FIX: store before clearing
+
     const userMessage: Message = {
       id: Date.now().toString(),
-      text: input,
+      text: question,
       isUser: true,
     };
 
@@ -51,11 +52,14 @@ const QAChat = ({ documentId }: QAChatProps) => {
     setError('');
 
     try {
-      const response = await fetch('/api/qa', {
+      const response = await fetch('/api/ask', { // ✅ FIXED ROUTE
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json', // ✅ IMPORTANT
+        },
         body: JSON.stringify({
           documentId,
-          question: input,
+          question,
         }),
       });
 
@@ -73,7 +77,7 @@ const QAChat = ({ documentId }: QAChatProps) => {
       };
 
       setMessages((prev) => [...prev, botMessage]);
-    } catch (err) {
+    } catch {
       setError('Something went wrong.');
     } finally {
       setLoading(false);
@@ -85,11 +89,13 @@ const QAChat = ({ documentId }: QAChatProps) => {
   };
 
   return (
-    <div>
-      <h2>Ask a question about the document...</h2>
+    <div className="mt-6 p-4 border rounded bg-white shadow">
+      <h2 className="text-lg font-semibold mb-3">
+        Ask a question about the document...
+      </h2>
 
       {/* Messages */}
-      <div>
+      <div className="space-y-2 max-h-60 overflow-y-auto mb-3">
         {messages.map((msg) => (
           <div key={msg.id}>
             <strong>{msg.isUser ? 'You: ' : 'Bot: '}</strong>
@@ -99,22 +105,34 @@ const QAChat = ({ documentId }: QAChatProps) => {
       </div>
 
       {/* Error */}
-      {error && <div>{error}</div>}
+      {error && <div className="text-red-500 mb-2">{error}</div>}
 
       {/* Input */}
       <input
         placeholder="Ask a question..."
         value={input}
         onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') handleSend(); // ✅ ENTER SUPPORT
+        }}
+        className="w-full border p-2 mb-2"
       />
 
-      <button onClick={handleSend} disabled={loading}>
-        Send
+      <button
+        onClick={handleSend}
+        disabled={loading}
+        className="px-4 py-2 bg-blue-600 text-white rounded"
+      >
+        {loading ? 'Thinking...' : 'Send'}
       </button>
 
       {/* Stats */}
-      <div>Tokens used: {tokensUsed}</div>
-      <div>Questions remaining: {questionsRemaining}</div>
+      <div className="mt-3 text-sm text-gray-600">
+        Tokens used: {tokensUsed}
+      </div>
+      <div className="text-sm text-gray-600">
+        Questions remaining: {questionsRemaining}
+      </div>
     </div>
   );
 };
