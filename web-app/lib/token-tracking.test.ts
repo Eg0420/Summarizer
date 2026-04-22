@@ -4,6 +4,11 @@ import {
   checkAndEnforceRateLimit,
   getSessionUsage,
 } from './token-tracking';
+import { resetUsage } from './token-tracking';
+
+beforeEach(() => {
+  resetUsage();
+});
 
 describe('Token Tracking & Rate Limiting', () => {
   beforeEach(() => {

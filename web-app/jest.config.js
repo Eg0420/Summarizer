@@ -1,22 +1,22 @@
+/** @type {import('jest').Config} */
 module.exports = {
   testEnvironment: 'jsdom',
-  preset: 'ts-jest',
-  roots: ['<rootDir>'],
-  testMatch: ['**/__tests__/**/*.test.{js,ts,jsx,tsx}', '**/*.test.{js,ts,jsx,tsx}'],
+
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
+
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
       tsconfig: {
-        jsx: 'react-jsx',
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-      },
+        jsx: 'react-jsx'
+      }
     }],
   },
+
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  globalSetup: undefined,
-  globalTeardown: undefined,
+
+  testPathIgnorePatterns: ['/node_modules/', '/e2e/'],
 };

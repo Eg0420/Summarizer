@@ -1,7 +1,13 @@
 /**
- * LLM utilities for summarization and Q&A
+ * LLM utilities for summarization and Q&A (REAL OpenAI Implementation)
  */
+
+import OpenAI from 'openai';
 import { trackTokenUsage } from './token-tracking';
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export interface LLMResult {
   summary?: string;
@@ -13,57 +19,46 @@ export interface LLMResult {
  * Embed text using OpenAI API
  */
 export async function embedText(text: string): Promise<number[]> {
-  // Placeholder implementation
-  // In production, this would call OpenAI embedding API:
-  // const response = await openai.createEmbedding({
-  //   model: "text-embedding-3-small",
-  //   input: text,
-  // });
-  // return response.data[0].embedding;
-  
-  // Track embedding tokens
-  const tokensUsed = estimateTokenCount(text);
-  trackTokenUsage('embedding', tokensUsed);
-  
-  // For now, return a deterministic mock embedding based on text
-  const hash = hashString(text);
-  return Array(1536)
-    .fill(0)
-    .map((_, i) => Math.sin(hash + i) * 0.5 + 0.5);
-}
+  const response = await openai.embeddings.create({
+    model: 'text-embedding-3-small',
+    input: text,
+  });
 
-/**
- * Simple hash function for text
- */
-function hashString(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return Math.abs(hash);
+  const tokensUsed = response.usage?.total_tokens || estimateTokenCount(text);
+  trackTokenUsage('embedding', tokensUsed);
+
+  return response.data[0].embedding;
 }
 
 /**
  * Generate a summary from concatenated chunks using OpenAI
  */
-export async function summarizeChunks(text: string): Promise<{ summary: string; tokensUsed: number }> {
-  // Placeholder implementation
-  // In production, this would call OpenAI API:
-  // const response = await openai.createChatCompletion({
-  //   model: "gpt-4-turbo",
-  //   messages: [{
-  //     role: "user",
-  //     content: `Summarize the following document:\n\n${text}`
-  //   }],
-  // });
-  
-  // For now, return a simple mock summary
-  const summary = generateMockSummary(text);
-  const tokensUsed = estimateTokenCount(text);
+export async function summarizeChunks(
+  text: string
+): Promise<{ summary: string; tokensUsed: number }> {
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'system',
+        content: `
+You are a helpful assistant that summarizes documents clearly and concisely.
+Focus on key ideas, main points, and conclusions.
+        `,
+      },
+      {
+        role: 'user',
+        content: `Summarize the following document:\n\n${text}`,
+      },
+    ],
+  });
+
+  const summary = response.choices[0].message.content || 'No summary generated.';
+  const tokensUsed =
+    response.usage?.total_tokens || estimateTokenCount(text);
+
   trackTokenUsage('completion', tokensUsed);
-  
+
   return { summary, tokensUsed };
 }
 
@@ -74,38 +69,42 @@ export async function answerQuestion(
   question: string,
   contextChunks: string[]
 ): Promise<{ answer: string; tokensUsed: number }> {
-  // Placeholder implementation
-  // In production, this would call OpenAI API with context
-  
   const context = contextChunks.join('\n\n');
-  const answer = generateMockAnswer(question, context);
-  const tokensUsed = estimateTokenCount(question + context);
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      {
+        role: 'system',
+        content: `
+You are a document-based question answering assistant.
+
+RULES:
+- Answer ONLY using the provided context
+- If the answer is not found, say: "I couldn't find this in the document"
+- Be concise and clear
+- Cite sources like (Chunk 1), (Chunk 3) when possible
+        `,
+      },
+      {
+        role: 'user',
+        content: `Context:\n${context}\n\nQuestion: ${question}`,
+      },
+    ],
+  });
+
+  const answer =
+    response.choices[0].message.content || 'No answer generated.';
+  const tokensUsed =
+    response.usage?.total_tokens || estimateTokenCount(question + context);
+
   trackTokenUsage('completion', tokensUsed);
-  
+
   return { answer, tokensUsed };
 }
 
 /**
- * Generate mock summary (placeholder)
- */
-function generateMockSummary(text: string): string {
-  const sentences = text.split('.').filter((s) => s.trim().length > 0);
-  const keyPoints = sentences.slice(0, Math.min(3, sentences.length));
-  return 'Document Summary: ' + keyPoints.join('. ') + '.';
-}
-
-/**
- * Generate mock answer (placeholder)
- */
-function generateMockAnswer(question: string, context: string): string {
-  // Simple mock: extract relevant sentences from context
-  const sentences = context.split('.').filter((s) => s.trim().length > 0);
-  const firstSentence = sentences[0] || 'No information available.';
-  return `Based on the document: ${firstSentence}.`;
-}
-
-/**
- * Rough token count estimate (1 word ~= 1.3 tokens)
+ * Rough token count estimate (fallback only)
  */
 function estimateTokenCount(text: string): number {
   const words = text.split(/\s+/).length;
