@@ -141,8 +141,9 @@ def process_pdf():
         # ✅ FINAL RESPONSE (CRITICAL FIX)
         return jsonify({
             "documentId": doc_id,
-            "filename": filename,   # 🔥 ADD THIS LINE
+            "filename": filename,
             "chunks": chunks,
+            "chunkCount": len(chunks),   # 🔥 ADD THIS LINE
             "text": full_text,
             "summary": summary,
             "textLength": len(full_text),
