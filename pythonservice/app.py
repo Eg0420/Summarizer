@@ -3,6 +3,7 @@ from flask_cors import CORS
 import os
 import uuid
 import tempfile
+import json
 from werkzeug.utils import secure_filename
 from etl_pipeline import process_pdf_to_embeddings
 from PyPDF2 import PdfReader
@@ -11,7 +12,7 @@ from openai import OpenAI
 app = Flask(__name__)
 CORS(app)
 
-# ✅ OpenAI client (safe init)
+# ✅ OpenAI client
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
@@ -20,6 +21,7 @@ ALLOWED_EXTENSIONS = {'pdf'}
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_DIR = os.path.dirname(BASE_DIR)
+
 DATA_DIRS = {
     'raw': os.environ.get('DATA_RAW_DIR', os.path.join(REPO_DIR, 'data', 'raw')),
     'processed': os.environ.get('DATA_PROCESSED_DIR', os.path.join(REPO_DIR, 'data', 'processed')),
@@ -55,7 +57,7 @@ def process_pdf():
             file.save(tmp.name)
             tmp_path = tmp.name
 
-        # Process PDF
+        # ✅ Run pipeline
         result = process_pdf_to_embeddings(
             pdf_path=tmp_path,
             doc_id=doc_id,
@@ -65,23 +67,43 @@ def process_pdf():
 
         print("DEBUG RESULT:", result)
 
-        # 🔥 SUMMARY LOGIC (AI + fallback)
-        try:
-            reader = PdfReader(tmp_path)
-            full_text = ""
+        # 🔥 LOAD CHUNKS FROM GOLD LAYER
+        gold_path = os.path.join(DATA_DIRS['gold'], f"{doc_id}.json")
 
+        chunks = []
+        full_text = ""
+
+        if os.path.exists(gold_path):
+            with open(gold_path, "r") as f:
+                gold_data = json.load(f)
+
+                chunks = gold_data.get("chunks", [])
+
+                full_text = "\n\n".join([c.get("text", "") for c in chunks])
+
+        else:
+            print("⚠️ Gold file not found, using fallback extraction")
+
+            reader = PdfReader(tmp_path)
             for page in reader.pages:
                 full_text += page.extract_text() or ""
 
+            chunks = [
+                {
+                    "chunkId": 0,
+                    "text": full_text[:3000]
+                }
+            ]
+
+        # 🔥 SUMMARY LOGIC
+        try:
             if not full_text:
                 summary = "No text extracted from PDF"
 
             else:
-                # ✅ Check if we should use AI
                 use_ai = os.environ.get("USE_AI", "true").lower() == "true"
 
                 if use_ai and client:
-                    # 🔥 AI summary
                     trimmed_text = full_text[:3000]
 
                     response = client.chat.completions.create(
@@ -89,7 +111,7 @@ def process_pdf():
                         messages=[
                             {
                                 "role": "system",
-                                "content": "You are a helpful assistant that summarizes documents clearly and concisely."
+                                "content": "You summarize documents clearly and concisely."
                             },
                             {
                                 "role": "user",
@@ -102,7 +124,6 @@ def process_pdf():
                     summary = response.choices[0].message.content.strip()
 
                 else:
-                    # ✅ Fallback (used in tests)
                     sentences = full_text.split(". ")
                     summary = ". ".join(sentences[:2]).strip()
 
@@ -113,13 +134,17 @@ def process_pdf():
             print("SUMMARY ERROR:", str(e))
             summary = "Summary generation failed"
 
-        # Delete temp file
+        # Cleanup
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
 
+        # ✅ FINAL RESPONSE (CRITICAL FIX)
         return jsonify({
-            **result,
-            "summary": summary
+            "documentId": doc_id,
+            "chunks": chunks,
+            "text": full_text,
+            "summary": summary,
+            "textLength": len(full_text),
         }), 200
 
     except Exception as e:
