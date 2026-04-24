@@ -60,6 +60,8 @@ export async function POST(req: NextRequest) {
       data = { error: 'Invalid response from backend' };
     }
 
+    console.log('🔍 Flask response:', data);
+
     if (!response.ok) {
       return NextResponse.json(data, { status: response.status });
     }
@@ -67,22 +69,37 @@ export async function POST(req: NextRequest) {
     // ✅ Generate documentId
     const documentId = data.documentId || randomUUID();
 
-    // ✅ Extract chunks
-    const chunks = data.chunks || [];
+    // 🔥 FIX: Flexible chunk handling
+    let chunks = data.chunks;
 
+    // Fallback if Flask only returns text
+    if (!chunks && data.text) {
+      console.log('⚠️ No chunks from backend, creating fallback chunk');
+
+      chunks = [
+        {
+          chunkId: 0,
+          text: data.text,
+        },
+      ];
+    }
+
+    // Final validation
     if (!chunks || chunks.length === 0) {
       return NextResponse.json(
-        { error: 'No chunks returned from processing backend' },
+        {
+          error:
+            'Processing backend did not return usable data (no chunks or text)',
+        },
         { status: 500 }
       );
     }
 
-    // 🔥 SAVE DOCUMENT (CLEAN + CENTRALIZED)
+    // ✅ Save document
     saveDocument(documentId, chunks);
 
     console.log('✅ Saved document:', documentId);
 
-    // ✅ Return response
     return NextResponse.json({
       documentId,
       filename: file.name,
@@ -90,7 +107,6 @@ export async function POST(req: NextRequest) {
       chunkCount: chunks.length,
       textLength: data.textLength || 0,
     });
-
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Unknown processing error';
